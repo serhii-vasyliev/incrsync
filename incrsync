@@ -1,0 +1,43 @@
+#!/bin/sh
+ERR=0
+DIR=$1
+if [ ! -d $DIR ]
+	then
+		echo $DIR is not a directory! Exiting.
+		exit 1
+	fi
+SCH=$2
+
+RSYNC='rsync --partial'
+ionice -c 3 echo -n 2>/dev/null
+if [ $? -ne 0 ]
+	then
+	#if ionice is available, use it
+	RSYNC="ionice -c 3 $RSYNC"
+fi
+
+TS=$DIR/timestamp.txt
+
+if [ -f $TS ]
+then
+	for ITEM in `find $DIR -mindepth 1 -maxdepth 1 -newer $TS `
+	do
+		$RSYNC -a $ITEM $SCH
+		if [ $? -ne 0 ]
+		then
+			ERR=`expr $ERR + 1`
+		fi
+	done
+else
+	$RSYNC -a $DIR/   $SCH
+	if [ $? -ne 0 ]
+	then
+		ERR=`expr $ERR + 1`
+	fi
+fi
+
+if [ $ERR -eq 0 ]
+then
+	touch $TS
+fi
+
